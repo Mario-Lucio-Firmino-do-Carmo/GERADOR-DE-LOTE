@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Lotes - Aronium</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f4f9; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        label { display: block; margin-top: 15px; font-weight: bold; }
+        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        .radio-group { margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { margin-top: 25px; width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 4px; }
+        button:hover { background-color: #218838; }
+        #file-section, #format-section { padding: 10px; background: #e9ecef; margin-top: 10px; border-radius: 4px; }
+        #file-section { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Inserir Lote e Validade</h2>
+    
+    <div class="radio-group">
+        <label><input type="radio" name="mode" value="standalone" checked onchange="toggleMode()"> Imprimir APENAS Lote e Validade (Gerar Nova Etiqueta)</label>
+        <label><input type="radio" name="mode" value="aronium" onchange="toggleMode()"> Carimbar PDF da Etiqueta do Aronium</label>
+    </div>
+
+    <!-- Seção para anexar arquivo (só aparece se escolher Aronium) -->
+    <div id="file-section">
+        <label for="pdfFile">Selecione o PDF da Etiqueta do Aronium:</label>
+        <input type="file" id="pdfFile" accept="application/pdf">
+        <small>O Lote/Validade será impresso por cima desta etiqueta.</small>
+    </div>
+
+    <!-- Seção de formatação (só aparece se escolher Gerar Nova) -->
+    <div id="format-section">
+        <label for="formato">Formato de Impressão:</label>
+        <select id="formato">
+            <option value="58mm">Impressora Térmica 58mm (Bobina)</option>
+            <option value="a4_65">Folha A4 - 65 Etiquetas (Ex: Colacril 38,1 x 21,2mm)</option>
+            <option value="a4_126">Folha A4 - 126 Etiquetas (Ex: Colacril 26 x 15mm)</option>
+        </select>
+    </div>
+
+    <label for="lote">Número do Lote:</label>
+    <input type="text" id="lote" placeholder="Ex: LT-202610A">
+
+    <label for="validade">Data de Vencimento:</label>
+    <input type="date" id="validade">
+
+    <button onclick="gerarEtiqueta()">Gerar e Salvar PDF</button>
+</div>
+
+<script>
+    function toggleMode() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        if (mode === 'aronium') {
+            document.getElementById('file-section').style.display = 'block';
+            document.getElementById('format-section').style.display = 'none';
+        } else {
+            document.getElementById('file-section').style.display = 'none';
+            document.getElementById('format-section').style.display = 'block';
+        }
+    }
+
+    function formatarData(dataISO) {
+        if (!dataISO) return "";
+        const partes = dataISO.split('-');
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    async function gerarEtiqueta() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const lote = document.getElementById('lote').value;
+        const validade = document.getElementById('validade').value;
+        
+        if (!lote || !validade) {
+            alert("Por favor, preencha o Lote e a Validade.");
+            return;
+        }
+
+        const validadeFormatada = formatarData(validade);
+        const dataHoje = new Date().toISOString().split('T')[0];
+        
+        const { PDFDocument, rgb } = PDFLib;
+        let pdfDoc;
+
+        const textoImprimir = `Lote: ${lote}\nVal: ${validadeFormatada}`;
+
+        if (mode === 'aronium') {
+            const fileInput = document.getElementById('pdfFile');
+            if (fileInput.files.length === 0) {
+                alert("Selecione o arquivo PDF do Aronium!");
+                return;
+            }
+            const fileBytes = await fileInput.files[0].arrayBuffer();
+            pdfDoc = await PDFDocument.load(fileBytes);
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            
+            // Ajuste o X e Y abaixo para não cair em cima do código de barras
+            firstPage.drawText(textoImprimir, {
+                x: 10, 
+                y: 70, 
+                size: 8,
+                color: rgb(0, 0, 0),
+                lineHeight: 10
+            });
+        } else {
+            const formato = document.getElementById('formato').value;
+            pdfDoc = await PDFDocument.create();
+            
+            if (formato === '58mm') {
+                // Bobina térmica 58mm (164 pontos de largura)
+                const page = pdfDoc.addPage([164, 85]); 
+                page.drawText(textoImprimir, {
+                    x: 10, y: 40, size: 12, color: rgb(0, 0, 0), lineHeight: 14
+                });
+            } 
+            else if (formato === 'a4_65') {
+                // A4 padrão: 595.28 x 841.89 pontos
+                const page = pdfDoc.addPage([595.28, 841.89]);
+                const colunas = 5;
+                const linhas = 13;
+                // Dimensões aproximadas e espaçamentos (ajustar conforme necessidade)
+                const margemEsq = 20;
+                const margemTopo = 810;
+                const espacoX = 113; // ~40mm
+                const espacoY = 60;  // ~21mm
+
+                for (let l = 0; l < linhas; l++) {
+                    for (let c = 0; c < colunas; c++) {
+                        page.drawText(textoImprimir, {
+                            x: margemEsq + (c * espacoX),
+                            y: margemTopo - (l * espacoY),
+                            size: 10,
+                            color: rgb(0, 0, 0),
+                            lineHeight: 12
+                        });
+                    }
+                }
+            }
+            else if (formato === 'a4_126') {
+                // A4 padrão: 595.28 x 841.89 pontos
+                const page = pdfDoc.addPage([595.28, 841.89]);
+                const colunas = 7;
+                const linhas = 18;
+                const margemEsq = 20;
+                const margemTopo = 815;
+                const espacoX = 80;  // ~28mm
+                const espacoY = 44;  // ~15mm
+
+                for (let l = 0; l < linhas; l++) {
+                    for (let c = 0; c < colunas; c++) {
+                        page.drawText(textoImprimir, {
+                            x: margemEsq + (c * espacoX),
+                            y: margemTopo - (l * espacoY),
+                            size: 8,
+                            color: rgb(0, 0, 0),
+                            lineHeight: 10
+                        });
+                    }
+                }
+            }
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        const nomeArquivo = `${lote}_${dataHoje}_Val-${validade.replace(/-/g, '')}.pdf`;
+
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = nomeArquivo;
+        link.click();
+    }
+</script>
+
+</body>
+</html>
