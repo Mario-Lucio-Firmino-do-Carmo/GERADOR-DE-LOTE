@@ -2,177 +2,783 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Painel de Lotes - Aronium</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Lotes & Rastreabilidade Pet - Aronium</title>
+    <!-- PDF-Lib para gerar etiquetas e laudos em PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f4f4f9; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        label { display: block; margin-top: 15px; font-weight: bold; }
-        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
-        .radio-group { margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { margin-top: 25px; width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 4px; }
-        button:hover { background-color: #218838; }
-        #file-section, #format-section { padding: 10px; background: #e9ecef; margin-top: 10px; border-radius: 4px; }
-        #file-section { display: none; }
+        :root {
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --dark: #0f172a;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
+            --border-radius: 10px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: #f1f5f9; color: var(--gray-800); min-height: 100vh; padding: 16px; display: flex; flex-direction: column; align-items: center; }
+
+        .app-container { max-width: 900px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Cabeçalho */
+        header {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header-title h1 { font-size: 20px; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+        .header-title p { font-size: 13px; color: var(--gray-600); margin-top: 2px; }
+        .cloud-badge {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
+
+        /* Card Principal */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid var(--gray-200);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .card-title { font-size: 16px; font-weight: 700; color: var(--dark); }
+
+        /* Grid Formulário */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+        .hint { font-size: 11px; color: #64748b; }
+        input, select {
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+            background: white;
+        }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
+
+        /* Modo de Impressão */
+        .modo-switch {
+            display: flex;
+            gap: 10px;
+            background: var(--gray-100);
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .modo-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .modo-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        /* Botão de Ação */
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+            margin-top: 20px;
+        }
+        .btn-action:hover { background: var(--primary-hover); }
+
+        /* Preview Simples */
+        .preview-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+            margin-top: 16px;
+        }
+        .etiqueta-mockup {
+            display: inline-block;
+            background: white;
+            border: 1px solid #000;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            min-width: 220px;
+        }
+
+        /* Tabela Simplificada */
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .search-bar input { flex: 1; }
+        .table-wrap { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; padding: 10px 12px; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); color: var(--gray-600); font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid var(--gray-200); vertical-align: middle; }
+        tr:hover td { background: #f8fafc; }
+
+        .tag-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .tag-ok { background: #dcfce7; color: #15803d; }
+        .tag-alerta { background: #fef3c7; color: #b45309; }
+        .tag-vencido { background: #fee2e2; color: #b91c1c; }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-sm:hover { background: #f1f5f9; }
+        .btn-recall { border-color: #fca5a5; color: #b91c1c; background: #fff1f2; }
+        .btn-recall:hover { background: #fee2e2; }
+
+        /* Modal de Rastreabilidade */
+        .modal-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+        }
+        .modal-bg.active { display: flex; }
+        .modal-card {
+            background: white;
+            border-radius: 12px;
+            max-width: 520px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            border-top: 6px solid var(--danger);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 17px; font-weight: 700; color: #991b1b; }
+        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; }
+        .info-row strong { color: var(--dark); }
+
+        footer { text-align: center; font-size: 12px; color: #94a3b8; padding: 12px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Inserir Lote e Validade</h2>
-    
-    <div class="radio-group">
-        <label><input type="radio" name="mode" value="standalone" checked onchange="toggleMode()"> Imprimir APENAS Lote e Validade (Gerar Nova Etiqueta)</label>
-        <label><input type="radio" name="mode" value="aronium" onchange="toggleMode()"> Carimbar PDF da Etiqueta do Aronium</label>
+<div class="app-container">
+    <!-- Cabeçalho -->
+    <header>
+        <div class="header-title">
+            <h1>🐾 Rastreamento de Lotes & Validade</h1>
+            <p>Emissão simples de etiquetas para alimentos pet e rastreio de fornecedores (Aronium PDV)</p>
+        </div>
+        <div class="cloud-badge" title="Configure a pasta de download do navegador para a pasta do Google Drive ou OneDrive">
+            <span class="dot"></span>
+            <span>PDFs Salvando na Nuvem</span>
+        </div>
+    </header>
+
+    <!-- Formulário Principal: Gerar e Salvar em 1 Clique -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">1. Gerar Etiqueta & Registrar Lote</span>
+            <span class="hint">Preencha e imprima. O lote fica salvo automaticamente para rastreamento.</span>
+        </div>
+
+        <!-- Seletor de Modo Simples -->
+        <div class="modo-switch">
+            <button type="button" class="modo-btn active" id="btn-modo-nova" onclick="alternarModo('nova')">
+                🏷️ Imprimir Etiqueta Pequena (Lote + Validade)
+            </button>
+            <button type="button" class="modo-btn" id="btn-modo-aronium" onclick="alternarModo('aronium')">
+                📄 Carimbar PDF existente do Aronium
+            </button>
+        </div>
+
+        <!-- Seção de Arquivo (Só se for carimbar PDF do Aronium) -->
+        <div id="campo-arquivo-aronium" style="display: none; background: var(--gray-50); padding: 12px; border-radius: 6px; margin-bottom: 16px; border: 1px solid var(--gray-200);">
+            <label for="pdf-aronium">Selecione o PDF gerado pelo Aronium:</label>
+            <input type="file" id="pdf-aronium" accept="application/pdf" style="width: 100%; margin-top: 6px;">
+            <span class="hint">O Lote e a Validade serão carimbados no topo do PDF do Aronium.</span>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group full">
+                <label for="campo-produto">Nome do Alimento / Ração Pet: *</label>
+                <input type="text" id="campo-produto" placeholder="Ex: Ração Golden Frango & Arroz 15kg" oninput="atualizarVisualizacao()">
+            </div>
+
+            <div class="form-group">
+                <label for="campo-lote">Número do Lote do Insumo: *</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="campo-lote" placeholder="Ex: LT-2410-01" oninput="atualizarVisualizacao()" style="flex: 1;">
+                    <button type="button" class="btn-sm" onclick="gerarCodigoSugerido()" title="Gerar código baseado na data">Sugerir</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="campo-validade">Data de Vencimento / Validade: *</label>
+                <input type="date" id="campo-validade" onchange="atualizarVisualizacao()">
+            </div>
+
+            <div class="form-group">
+                <label for="campo-fornecedor">De onde veio o insumo? (Fornecedor / Marca): *</label>
+                <input type="text" id="campo-fornecedor" placeholder="Ex: Distribuidora Pet Sul / NF 10450">
+                <span class="hint">Crucial para saber quem acionar se algum pet passar mal.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="campo-fabricacao">Data de Fabricação (Opcional):</label>
+                <input type="date" id="campo-fabricacao" onchange="atualizarVisualizacao()">
+            </div>
+
+            <div class="form-group full" id="grupo-formato">
+                <label for="campo-formato">Tamanho da Etiqueta para Impressão:</label>
+                <select id="campo-formato">
+                    <option value="58mm">Impressora Térmica 58mm (Bobina contínua pequena para colar no pacote)</option>
+                    <option value="80mm">Impressora Térmica 80mm / 40x25mm (Bobina)</option>
+                    <option value="a4_65">Folha A4 - 65 Etiquetas (Pimaco / Colacril 38,1 x 21,2mm)</option>
+                    <option value="a4_126">Folha A4 - 126 Etiquetas (Pimaco / Colacril 26 x 15mm)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Preview da Etiqueta -->
+        <div class="preview-box">
+            <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Modelo da Etiqueta a ser impressa:</span>
+            <div style="margin-top: 8px;">
+                <div class="etiqueta-mockup" id="preview-etiqueta">
+                    <div id="prev-prod" style="font-size: 12px; color: #334155;">RAÇÃO PET EXEMPLO</div>
+                    <div id="prev-lote" style="font-size: 15px; margin: 2px 0;">LOTE: LT-2410-01</div>
+                    <div id="prev-val" style="font-size: 12px; color: #0284c7;">VAL: 14/04/2027</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão Único: Imprime e Salva ao Mesmo Tempo -->
+        <button type="button" class="btn-action" onclick="imprimirESalvarLote()">
+            🖨️ Imprimir Etiqueta & Salvar Lote no Histórico
+        </button>
     </div>
 
-    <!-- Seção para anexar arquivo (só aparece se escolher Aronium) -->
-    <div id="file-section">
-        <label for="pdfFile">Selecione o PDF da Etiqueta do Aronium:</label>
-        <input type="file" id="pdfFile" accept="application/pdf">
-        <small>O Lote/Validade será impresso por cima desta etiqueta.</small>
+    <!-- Histórico & Rastreabilidade: Super Direto -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">2. Histórico de Lotes & Consulta Rápida</span>
+            <span class="hint">Se um pet passar mal, localize o lote aqui imediatamente</span>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="campo-busca" placeholder="🔍 Digite o número do lote ou nome do produto para rastrear..." oninput="filtrarLotes()">
+            <button type="button" class="btn-sm" onclick="exportarExcel()" title="Baixar relatório em Excel">📊 Excel (CSV)</button>
+            <button type="button" class="btn-sm" onclick="exportarBackup()" title="Salvar backup completo">💾 Backup</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Lote</th>
+                        <th>Produto Pet</th>
+                        <th>Validade</th>
+                        <th>Fornecedor / Origem</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-lotes-tabela">
+                    <!-- Preenchido via Javascript -->
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <!-- Seção de formatação (só aparece se escolher Gerar Nova) -->
-    <div id="format-section">
-        <label for="formato">Formato de Impressão:</label>
-        <select id="formato">
-            <option value="58mm">Impressora Térmica 58mm (Bobina)</option>
-            <option value="a4_65">Folha A4 - 65 Etiquetas (Ex: Colacril 38,1 x 21,2mm)</option>
-            <option value="a4_126">Folha A4 - 126 Etiquetas (Ex: Colacril 26 x 15mm)</option>
-        </select>
-    </div>
-
-    <label for="lote">Número do Lote:</label>
-    <input type="text" id="lote" placeholder="Ex: LT-202610A">
-
-    <label for="validade">Data de Vencimento:</label>
-    <input type="date" id="validade">
-
-    <button onclick="gerarEtiqueta()">Gerar e Salvar PDF</button>
 </div>
 
+<!-- Modal: Raio-X do Lote (Quando um Pet passa mal) -->
+<div class="modal-bg" id="modal-rastreio">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">🚨 Rastreamento do Insumo / Lote</div>
+            <button class="modal-close" onclick="fecharModal()">&times;</button>
+        </div>
+
+        <p style="font-size: 13px; color: #475569; margin-bottom: 14px;">
+            Dados registrados deste lote para identificar a origem e acionar o fornecedor:
+        </p>
+
+        <div id="modal-conteudo">
+            <!-- Dados preenchidos via JS -->
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button class="btn-action" style="margin-top: 0; background: var(--danger);" onclick="gerarLaudoRecallPDF()">
+                📄 Baixar Ficha de Recolhimento / Laudo (PDF)
+            </button>
+            <button class="btn-sm" onclick="fecharModal()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<footer>
+    Sistema de Lotes e Rastreabilidade Pet • Feito para operar em conjunto com Aronium PDV
+</footer>
+
 <script>
-    function toggleMode() {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        if (mode === 'aronium') {
-            document.getElementById('file-section').style.display = 'block';
-            document.getElementById('format-section').style.display = 'none';
-        } else {
-            document.getElementById('file-section').style.display = 'none';
-            document.getElementById('format-section').style.display = 'block';
+    const CHAVE_STORAGE = 'pet_lotes_aronium_v2';
+    let lotes = carregarLotes();
+    let modoAtual = 'nova';
+    let loteSelecionadoModal = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        // Datas padrão
+        const hoje = new Date();
+        const hojeISO = hoje.toISOString().split('T')[0];
+        document.getElementById('campo-fabricacao').value = hojeISO;
+
+        const dVal = new Date();
+        dVal.setMonth(dVal.getMonth() + 6); // +6 meses padrão para ração
+        document.getElementById('campo-validade').value = dVal.toISOString().split('T')[0];
+
+        gerarCodigoSugerido();
+        atualizarVisualizacao();
+        renderizarTabela();
+    });
+
+    function alternarModo(modo) {
+        modoAtual = modo;
+        document.getElementById('btn-modo-nova').classList.toggle('active', modo === 'nova');
+        document.getElementById('btn-modo-aronium').classList.toggle('active', modo === 'aronium');
+        document.getElementById('campo-arquivo-aronium').style.display = modo === 'aronium' ? 'block' : 'none';
+        document.getElementById('grupo-formato').style.display = modo === 'aronium' ? 'none' : 'block';
+    }
+
+    function gerarCodigoSugerido() {
+        const d = new Date();
+        const ano = String(d.getFullYear()).slice(-2);
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        document.getElementById('campo-lote').value = `LT-${ano}${mes}${dia}`;
+        atualizarVisualizacao();
+    }
+
+    function formatarDataBR(iso) {
+        if (!iso) return "";
+        const p = iso.split('-');
+        return `${p[2]}/${p[1]}/${p[0]}`;
+    }
+
+    function atualizarVisualizacao() {
+        const prod = document.getElementById('campo-produto').value.trim() || 'RAÇÃO PET EXEMPLO';
+        const lote = document.getElementById('campo-lote').value.trim() || 'LT-2410-01';
+        const val = formatarDataBR(document.getElementById('campo-validade').value);
+
+        document.getElementById('prev-prod').innerText = prod.toUpperCase();
+        document.getElementById('prev-lote').innerText = `LOTE: ${lote.toUpperCase()}`;
+        document.getElementById('prev-val').innerText = `VAL: ${val || '--/--/----'}`;
+    }
+
+    function carregarLotes() {
+        try {
+            const salvo = localStorage.getItem(CHAVE_STORAGE);
+            return salvo ? JSON.parse(salvo) : [];
+        } catch (e) {
+            return [];
         }
     }
 
-    function formatarData(dataISO) {
-        if (!dataISO) return "";
-        const partes = dataISO.split('-');
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    function salvarLotesStorage() {
+        localStorage.setItem(CHAVE_STORAGE, JSON.stringify(lotes));
+        renderizarTabela();
     }
 
-    async function gerarEtiqueta() {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        const lote = document.getElementById('lote').value;
-        const validade = document.getElementById('validade').value;
-        
-        if (!lote || !validade) {
-            alert("Por favor, preencha o Lote e a Validade.");
+    // 1 Clique: Salva o Lote e Gera o PDF para Impressão
+    async function imprimirESalvarLote() {
+        const prod = document.getElementById('campo-produto').value.trim();
+        const lote = document.getElementById('campo-lote').value.trim().toUpperCase();
+        const val = document.getElementById('campo-validade').value;
+        const fab = document.getElementById('campo-fabricacao').value;
+        const fornecedor = document.getElementById('campo-fornecedor').value.trim();
+
+        if (!prod || !lote || !val) {
+            alert("Por favor, preencha o Nome da Ração/Alimento, o Lote e a Validade!");
             return;
         }
 
-        const validadeFormatada = formatarData(validade);
-        const dataHoje = new Date().toISOString().split('T')[0];
-        
-        const { PDFDocument, rgb } = PDFLib;
-        let pdfDoc;
-
-        const textoImprimir = `Lote: ${lote}\nVal: ${validadeFormatada}`;
-
-        if (mode === 'aronium') {
-            const fileInput = document.getElementById('pdfFile');
-            if (fileInput.files.length === 0) {
-                alert("Selecione o arquivo PDF do Aronium!");
+        if (!fornecedor) {
+            if (!confirm("O campo 'De onde veio o insumo' está vazio. Deseja continuar sem informar o fornecedor? (Recomendamos informar para rastreabilidade)")) {
                 return;
             }
-            const fileBytes = await fileInput.files[0].arrayBuffer();
-            pdfDoc = await PDFDocument.load(fileBytes);
-            const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
-            
-            // Ajuste o X e Y abaixo para não cair em cima do código de barras
-            firstPage.drawText(textoImprimir, {
-                x: 10, 
-                y: 70, 
-                size: 8,
-                color: rgb(0, 0, 0),
-                lineHeight: 10
+        }
+
+        // 1. Salvar no Histórico (ou atualizar se já existe)
+        const existeIdx = lotes.findIndex(l => l.lote === lote);
+        const registro = {
+            id: 'lt_' + Date.now(),
+            produto: prod,
+            lote: lote,
+            validade: val,
+            fabricacao: fab,
+            fornecedor: fornecedor || 'Não especificado',
+            dataRegistro: new Date().toISOString()
+        };
+
+        if (existeIdx >= 0) {
+            lotes[existeIdx] = registro;
+        } else {
+            lotes.unshift(registro);
+        }
+        salvarLotesStorage();
+
+        // 2. Gerar e baixar PDF
+        await gerarPDFEtiqueta(registro);
+    }
+
+    async function gerarPDFEtiqueta(dados) {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const valBR = formatarDataBR(dados.validade);
+        const fabBR = formatarDataBR(dados.fabricacao);
+        const dataHoje = new Date().toISOString().split('T')[0];
+
+        let pdfDoc;
+
+        if (modoAtual === 'aronium') {
+            const arqInput = document.getElementById('pdf-aronium');
+            if (arqInput.files.length === 0) {
+                alert("Lote salvo no histórico! Como você escolheu o modo Aronium, anexe o PDF do Aronium para que ele seja carimbado.");
+                return;
+            }
+            const bytes = await arqInput.files[0].arrayBuffer();
+            pdfDoc = await PDFDocument.load(bytes);
+            const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            const paginas = pdfDoc.getPages();
+
+            paginas.forEach(p => {
+                const { height } = p.getSize();
+                p.drawText(`LOTE: ${dados.lote} | VAL: ${valBR}`, {
+                    x: 10, y: height - 14, size: 8, font: fontBold, color: rgb(0,0,0)
+                });
             });
         } else {
-            const formato = document.getElementById('formato').value;
+            const formato = document.getElementById('campo-formato').value;
             pdfDoc = await PDFDocument.create();
-            
+            const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+            const textoLote = `LOTE: ${dados.lote}`;
+            const textoVal = `VAL: ${valBR}`;
+            const textoFab = fabBR ? `FAB: ${fabBR}` : '';
+
             if (formato === '58mm') {
-                // Bobina térmica 58mm (164 pontos de largura)
-                const page = pdfDoc.addPage([164, 85]); 
-                page.drawText(textoImprimir, {
-                    x: 10, y: 40, size: 12, color: rgb(0, 0, 0), lineHeight: 14
-                });
-            } 
+                // Bobina térmica 58mm (164 x 85 pontos)
+                const page = pdfDoc.addPage([164, 85]);
+                page.drawText(dados.produto.substring(0, 22).toUpperCase(), { x: 8, y: 68, size: 8.5, font: fontBold, color: rgb(0,0,0) });
+                page.drawText(textoLote, { x: 8, y: 46, size: 12, font: fontBold, color: rgb(0,0,0) });
+                page.drawText(`${textoFab}  ${textoVal}`, { x: 8, y: 26, size: 9, font: fontBold, color: rgb(0,0,0) });
+                page.drawText("ALIMENTACAO ANIMAL", { x: 8, y: 10, size: 7, font: fontRegular, color: rgb(0.3,0.3,0.3) });
+            }
+            else if (formato === '80mm') {
+                // Bobina térmica 80mm (226 x 110 pontos)
+                const page = pdfDoc.addPage([226, 110]);
+                page.drawText(dados.produto.substring(0, 28).toUpperCase(), { x: 12, y: 88, size: 10, font: fontBold, color: rgb(0,0,0) });
+                page.drawText(textoLote, { x: 12, y: 60, size: 15, font: fontBold, color: rgb(0,0,0) });
+                page.drawText(`${textoFab} | ${textoVal}`, { x: 12, y: 36, size: 11, font: fontBold, color: rgb(0,0,0) });
+                page.drawText("ALIMENTO PET - CONTROLE SANITARIO", { x: 12, y: 16, size: 8, font: fontRegular, color: rgb(0.3,0.3,0.3) });
+            }
             else if (formato === 'a4_65') {
-                // A4 padrão: 595.28 x 841.89 pontos
+                // Folha A4 com 65 etiquetas (5 colunas x 13 linhas)
                 const page = pdfDoc.addPage([595.28, 841.89]);
-                const colunas = 5;
-                const linhas = 13;
-                // Dimensões aproximadas e espaçamentos (ajustar conforme necessidade)
-                const margemEsq = 20;
-                const margemTopo = 810;
-                const espacoX = 113; // ~40mm
-                const espacoY = 60;  // ~21mm
+                const colunas = 5, linhas = 13;
+                const margemEsq = 20, margemTopo = 812;
+                const espacoX = 113, espacoY = 62;
 
                 for (let l = 0; l < linhas; l++) {
                     for (let c = 0; c < colunas; c++) {
-                        page.drawText(textoImprimir, {
-                            x: margemEsq + (c * espacoX),
-                            y: margemTopo - (l * espacoY),
-                            size: 10,
-                            color: rgb(0, 0, 0),
-                            lineHeight: 12
-                        });
+                        const px = margemEsq + (c * espacoX);
+                        const py = margemTopo - (l * espacoY);
+                        page.drawText(dados.produto.substring(0, 18).toUpperCase(), { x: px, y: py, size: 6.5, font: fontBold });
+                        page.drawText(textoLote, { x: px, y: py - 16, size: 9, font: fontBold });
+                        page.drawText(textoVal, { x: px, y: py - 30, size: 7.5, font: fontBold });
                     }
                 }
             }
             else if (formato === 'a4_126') {
-                // A4 padrão: 595.28 x 841.89 pontos
+                // Folha A4 com 126 etiquetas (7 colunas x 18 linhas)
                 const page = pdfDoc.addPage([595.28, 841.89]);
-                const colunas = 7;
-                const linhas = 18;
-                const margemEsq = 20;
-                const margemTopo = 815;
-                const espacoX = 80;  // ~28mm
-                const espacoY = 44;  // ~15mm
+                const colunas = 7, linhas = 18;
+                const margemEsq = 18, margemTopo = 815;
+                const espacoX = 80, espacoY = 44;
 
                 for (let l = 0; l < linhas; l++) {
                     for (let c = 0; c < colunas; c++) {
-                        page.drawText(textoImprimir, {
-                            x: margemEsq + (c * espacoX),
-                            y: margemTopo - (l * espacoY),
-                            size: 8,
-                            color: rgb(0, 0, 0),
-                            lineHeight: 10
-                        });
+                        const px = margemEsq + (c * espacoX);
+                        const py = margemTopo - (l * espacoY);
+                        page.drawText(dados.produto.substring(0, 14), { x: px, y: py, size: 5.5, font: fontBold });
+                        page.drawText(textoLote, { x: px, y: py - 12, size: 7, font: fontBold });
+                        page.drawText(textoVal, { x: px, y: py - 22, size: 6, font: fontBold });
                     }
                 }
             }
         }
 
         const pdfBytes = await pdfDoc.save();
-        const nomeArquivo = `${lote}_${dataHoje}_Val-${validade.replace(/-/g, '')}.pdf`;
+        // Nome padronizado para sincronizar direto no Google Drive ou OneDrive
+        const prodLimpo = dados.produto.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 15);
+        const nomeArquivo = `LOTE_${dados.lote}_${prodLimpo}_${dataHoje}.pdf`;
 
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
         const link = document.createElement("a");
         link.href = window.URL.createObjectURL(blob);
         link.download = nomeArquivo;
+        link.click();
+    }
+
+    // Tabela de Histórico
+    function renderizarTabela() {
+        const tbody = document.getElementById('lista-lotes-tabela');
+        const busca = (document.getElementById('campo-busca').value || '').toLowerCase();
+        tbody.innerHTML = '';
+
+        const filtrados = lotes.filter(l => 
+            l.lote.toLowerCase().includes(busca) || 
+            l.produto.toLowerCase().includes(busca) ||
+            l.fornecedor.toLowerCase().includes(busca)
+        );
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum lote registrado. Preencha o formulário acima para gerar a etiqueta!</td></tr>`;
+            return;
+        }
+
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        filtrados.forEach(item => {
+            const tr = document.createElement('tr');
+
+            // Status da Validade
+            let tag = '<span class="tag-status tag-ok">No Prazo</span>';
+            if (item.validade) {
+                const dt = new Date(item.validade + 'T00:00:00');
+                const diff = Math.ceil((dt - hoje) / (1000 * 60 * 60 * 24));
+                if (diff < 0) {
+                    tag = `<span class="tag-status tag-vencido">Vencido (${Math.abs(diff)}d)</span>`;
+                } else if (diff <= 15) {
+                    tag = `<span class="tag-status tag-alerta">Vence em ${diff}d</span>`;
+                }
+            }
+
+            tr.innerHTML = `
+                <td>${tag}</td>
+                <td><strong style="color: #0284c7;">${item.lote}</strong></td>
+                <td>${item.produto}</td>
+                <td>${formatarDataBR(item.validade)}</td>
+                <td><small>${item.fornecedor}</small></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    <button class="btn-sm" onclick="reimprimir('${item.lote}')" title="Reimprimir etiqueta deste lote">🖨️ Etiqueta</button>
+                    <button class="btn-sm btn-recall" onclick="abrirRastreio('${item.lote}')" title="Ver de onde veio o insumo e gerar laudo se o pet passou mal">🚨 Rastrear</button>
+                    <button class="btn-sm" onclick="excluirLote('${item.id}')" title="Excluir lote">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filtrarLotes() { renderizarTabela(); }
+
+    function reimprimir(loteCod) {
+        const item = lotes.find(l => l.lote === loteCod);
+        if (item) gerarPDFEtiqueta(item);
+    }
+
+    function excluirLote(id) {
+        if (!confirm("Deseja remover este lote do histórico?")) return;
+        lotes = lotes.filter(l => l.id !== id);
+        salvarLotesStorage();
+    }
+
+    // Modal de Rastreabilidade (Pet Passou Mal)
+    function abrirRastreio(loteCod) {
+        const item = lotes.find(l => l.lote === loteCod);
+        if (!item) return;
+
+        loteSelecionadoModal = item;
+        const box = document.getElementById('modal-conteudo');
+        box.innerHTML = `
+            <div class="info-row"><span>Número do Lote:</span> <strong>${item.lote}</strong></div>
+            <div class="info-row"><span>Alimento Pet:</span> <strong>${item.produto}</strong></div>
+            <div class="info-row"><span>De onde veio (Fornecedor/NF):</span> <strong style="color: #0369a1;">${item.fornecedor}</strong></div>
+            <div class="info-row"><span>Data de Fabricação:</span> <span>${formatarDataBR(item.fabricacao) || 'Não informada'}</span></div>
+            <div class="info-row"><span>Data de Validade:</span> <span>${formatarDataBR(item.validade)}</span></div>
+            <div class="info-row"><span>Cadastrado em:</span> <span>${new Date(item.dataRegistro).toLocaleDateString('pt-BR')}</span></div>
+        `;
+
+        document.getElementById('modal-rastreio').classList.add('active');
+    }
+
+    function fecharModal() {
+        document.getElementById('modal-rastreio').classList.remove('active');
+    }
+
+    async function gerarLaudoRecallPDF() {
+        if (!loteSelecionadoModal) return;
+
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const pdfDoc = await PDFDocument.create();
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+        const page = pdfDoc.addPage([595.28, 841.89]); // A4
+        const { height } = page.getSize();
+
+        // Cabeçalho
+        page.drawText("FICHA DE RASTREABILIDADE E RECOLHIMENTO PET", {
+            x: 50, y: height - 60, size: 15, font: fontBold, color: rgb(0.8, 0.1, 0.1)
+        });
+        page.drawText("Controle de Insumos e Qualidade Alimentar Animal", {
+            x: 50, y: height - 78, size: 10, font: font, color: rgb(0.4, 0.4, 0.4)
+        });
+
+        const hojeStr = new Date().toLocaleString('pt-BR');
+        page.drawText(`Data de Emissão: ${hojeStr}`, {
+            x: 50, y: height - 95, size: 9, font: font, color: rgb(0.3, 0.3, 0.3)
+        });
+
+        page.drawLine({ start: { x: 50, y: height - 105 }, end: { x: 545, y: height - 105 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        let y = height - 135;
+        const addInfo = (rotulo, valor, destaque = false) => {
+            page.drawText(rotulo + ":", { x: 50, y: y, size: 11, font: fontBold, color: rgb(0,0,0) });
+            page.drawText(String(valor), { x: 220, y: y, size: 11, font: destaque ? fontBold : font, color: destaque ? rgb(0.8, 0, 0) : rgb(0.1, 0.1, 0.1) });
+            y -= 25;
+        };
+
+        addInfo("NÚMERO DO LOTE", loteSelecionadoModal.lote, true);
+        addInfo("PRODUTO / ALIMENTO PET", loteSelecionadoModal.produto);
+        addInfo("ORIGEM / FORNECEDOR / NF", loteSelecionadoModal.fornecedor, true);
+        addInfo("DATA DE FABRICAÇÃO", formatarDataBR(loteSelecionadoModal.fabricacao) || "Não informada");
+        addInfo("DATA DE VALIDADE", formatarDataBR(loteSelecionadoModal.validade));
+        addInfo("REGISTRO NO SISTEMA", new Date(loteSelecionadoModal.dataRegistro).toLocaleString('pt-BR'));
+
+        y -= 20;
+        page.drawLine({ start: { x: 50, y: y }, end: { x: 545, y: y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+        y -= 30;
+
+        page.drawText("MOTIVO DO RASTREAMENTO / RECOLHIMENTO:", { x: 50, y: y, size: 10, font: fontBold });
+        y -= 18;
+        page.drawText("Relato de anomalia ou mal-estar animal associado ao lote. Os produtos deste lote foram retirados\nda area de vendas para pericia junto a distribuidora/fabricante responsavel.", { x: 50, y: y, size: 9, font: font, lineHeight: 14 });
+
+        y -= 80;
+        page.drawLine({ start: { x: 70, y: y }, end: { x: 260, y: y }, thickness: 1, color: rgb(0,0,0) });
+        page.drawLine({ start: { x: 335, y: y }, end: { x: 525, y: y }, thickness: 1, color: rgb(0,0,0) });
+
+        y -= 15;
+        page.drawText("Responsavel Pet Shop / Clinica", { x: 95, y: y, size: 9, font: font });
+        page.drawText("Fornecedor / Veterinario / Fiscal", { x: 350, y: y, size: 9, font: font });
+
+        const bytes = await pdfDoc.save();
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `LAUDO_RASTREIO_PET_${loteSelecionadoModal.lote}.pdf`;
+        link.click();
+    }
+
+    // Exportações Simples
+    function exportarExcel() {
+        if (lotes.length === 0) {
+            alert("Nenhum lote registrado!");
+            return;
+        }
+        let csv = "Lote;Produto;Validade;Fabricacao;FornecedorOrigem;DataRegistro\n";
+        lotes.forEach(l => {
+            csv += `"${l.lote}";"${l.produto}";"${l.validade}";"${l.fabricacao || ''}";"${l.fornecedor}";"${l.dataRegistro}"\n`;
+        });
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `LOTES_PET_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+
+    function exportarBackup() {
+        const str = JSON.stringify(lotes, null, 2);
+        const blob = new Blob([str], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `BACKUP_LOTES_PET_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
     }
 </script>
